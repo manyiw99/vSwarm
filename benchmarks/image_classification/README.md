@@ -13,3 +13,5 @@ This benchmark consists of 2 functions:
 - `qps`
 - `max-latency`
 - `time`: limit the time benchmark run
+
+This benchmark implements `Resnet50` model inference on `Imagenet2012` val dataset. Currently, the used scenrio is "SingleStream", which means that 
