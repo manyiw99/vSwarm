@@ -13,7 +13,6 @@ import os
 
 class BackendTensorflow():
     def __init__(self):
-        # super(BackendTensorflow, self).__init__()
         self.inputs = []
         self.outputs = []
 
@@ -44,7 +43,6 @@ class BackendTensorflow():
                 if 'TF_INTER_OP_PARALLELISM_THREADS' in os.environ else os.cpu_count()
         infer_config.use_per_session_threads = 1
 
-        # TODO: support checkpoint and saved_model formats?
         graph_def = tf.compat.v1.GraphDef()
         with tf.compat.v1.gfile.FastGFile(model_path, "rb") as f:
             graph_def.ParseFromString(f.read())

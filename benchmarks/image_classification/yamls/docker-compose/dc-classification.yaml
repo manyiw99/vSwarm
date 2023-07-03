@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  image_classification-python:
+    image: image_classification-python:latest
+    container_name: image_classification-python
+    working_dir: /root
+    entrypoint:
+      - python3
+      - python/server.py
+      - --addr=0.0.0.0
+      - --port=50051
+    ports:
+      - target: 50051
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [gpu]
+      
+
+  relay:
+    image: vhiveease/relay:latest
+    entrypoint:
+      - /app/server
+      - --addr=0.0.0.0:50000
+      - --function-endpoint-url=image_classification-python
+      - --function-endpoint-port=50051
+      - --function-name=image_classification-python
+    ports:
+        - published: 50000
+          target: 50000
