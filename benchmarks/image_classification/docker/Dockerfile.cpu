@@ -31,35 +31,33 @@ RUN cd /opt && \
     echo "conda activate base" >> ~/.bashrc && \
     conda config --set always_yes yes --set changeps1 no
 
-RUN conda install pytorch-cpu torchvision-cpu -c pytorch
-RUN pip install --upgrade pip
-RUN pip install cmake
-RUN pip install future pillow onnx opencv-python-headless tensorflow onnxruntime
-RUN pip install Cython && pip install pycocotools
+RUN conda install pytorch-cpu torchvision-cpu -c pytorch && \
+    pip install --upgrade pip && \
+    pip install cmake && \
+    pip install future pillow onnx opencv-python-headless tensorflow==2.9.1 && \ 
+    pip install Cython && pip install pycocotools && pip3 install protobuf==3.20.*
 
 # loadgen
 RUN cd /tmp && \
-    git clone https://github.com/manyiw99/loadgen.git && \
-    cd loadgen && \
-    pip3 install pybind11 && \
-    CFLAGS="-std=c++14" python3 setup.py install && \
+    git clone --recursive https://github.com/manyiw99/mlperf_inference && \
+    cd mlperf_inference/loadgen && \
+    pip install pybind11 && \
+    CFLAGS="-std=c++14" python setup.py install && \
     rm -rf mlperf
 
-COPY benchmarks/image_classification/requirements.txt /tmp/
-RUN python3 -m pip install -r requirements.txt
-
 COPY benchmarks/image_classification/python /tmp/python
-COPY benchmarks/image_classification/data_imagenet /tmp/data_imagenet
 
 # Prepare dataset and model
-RUN cd /tmp/data_imagenet && \
+RUN cd /tmp/python/data_imagenet && \
     wget --quiet https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar && \
     tar xf ILSVRC2012_img_val.tar && \
-    mkdir /tmp/models && \
-    cd /tmp/models && \
+    cd /tmp/python/models && \
     wget --quiet https://zenodo.org/record/2535873/files/resnet50_v1.pb 
 
-ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/add-bert/proto/image_classification/image_classification_pb2_grpc.py /tmp/python
-ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/add-bert/proto/image_classification/image_classification_pb2.py /tmp/python/proto
+ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/proto/image_classification/image_classification_pb2_grpc.py /tmp/python
+ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/proto/image_classification/image_classification_pb2.py /tmp/python/proto
 
-ENTRYPOINT [ "python3", "python/server.py" ,"--count=10", "--addr=0.0.0.0", "--port=50051"]
+# ADD https://raw.githubusercontent.com/manyiw99/vSwarm-proto/main/proto/image_classification/image_classification_pb2_grpc.py /tmp/python
+# ADD https://raw.githubusercontent.com/manyiw99/vSwarm-proto/main/proto/image_classification/image_classification_pb2.py /tmp/python/proto
+
+ENTRYPOINT [ "/bin/bash", "/tmp/python/tools/run_help.sh"]

@@ -21,6 +21,11 @@ import numpy as np
 import dataset
 import imagenet
 
+from proto import image_classification_pb2
+import image_classification_pb2_grpc
+import grpc
+from concurrent import futures
+
 NANO_SEC = 1e9
 MILLI_SEC = 1000
 
@@ -63,12 +68,12 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
-    parser.add_argument("--dataset-path", default="/tmp/data_imagenet", help="path to the dataset")
-    parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
+    parser.add_argument("--dataset-path", default="/tmp/python/data_imagenet", help="path to the dataset")
+    parser.add_argument("--profile", default="resnet50-tf", help="standard profiles")
     parser.add_argument("--scenario", default="SingStream",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
-    parser.add_argument("--model", default="/tmp/models", help="model file")
+    parser.add_argument("--model", default="/tmp/python/models", help="model file")
     parser.add_argument("--output", default="/tmp/output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
     parser.add_argument("--outputs", help="model outputs")
@@ -82,9 +87,9 @@ def get_args():
     parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
 
     # file to use mlperf rules compliant parameters
-    parser.add_argument("--mlperf_conf", default="configs/mlperf.conf", help="mlperf rules config")
+    parser.add_argument("--mlperf_conf", default="/tmp/python/configs/user.conf", help="mlperf rules config")
     # file for user LoadGen settings such as target QPS
-    parser.add_argument("--user_conf", default="configs/user.conf", help="user config for user LoadGen settings such as target QPS")
+    parser.add_argument("--user_conf", default="/tmp/python/configs/user.conf", help="user config for user LoadGen settings such as target QPS")
     
     # below will override mlperf rules compliant settings
     parser.add_argument("--time", type=int, help="time to scan in seconds")
@@ -232,6 +237,23 @@ class QueueRunner(RunnerBase):
             worker.join()
 
 
+class Greeter(image_classification_pb2_grpc.GreeterServicer):
+    def SayHello(self, request, context):
+        token = request.name
+        msg = main()
+        return image_classification_pb2.HelloReply(message=msg)
+
+def serve():
+    args = get_args()
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
+
+    image_classification_pb2_grpc.add_GreeterServicer_to_server(Greeter(), server)
+    address = (args.addr + ":" + args.port)
+    server.add_insecure_port(address)
+    print("Start image_classification-python server. Addr: " + address)
+    server.start()
+    server.wait_for_termination()
+
 def add_results(final_results, name, result_dict, result_list, took, show_accuracy=False):
     percentiles = [50., 80., 90., 95., 99., 99.9]
     buckets = np.percentile(result_list, percentiles).tolist()
@@ -262,9 +284,11 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
     final_results[name] = result
 
     # to stdout
-    print("{} qps={:.2f}, mean={:.4f}, time={:.3f}{}, queries={}, tiles={}".format(
+    result = "{} qps={:.2f}, mean={:.4f}, time={:.3f}{}, queries={}, tiles={}".format(
         name, result["qps"], result["mean"], took, acc_str,
-        len(result_list), buckets_str))
+        len(result_list), buckets_str)
+    print(result)
+    return result
 
 
 def main():
@@ -408,4 +432,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    serve()

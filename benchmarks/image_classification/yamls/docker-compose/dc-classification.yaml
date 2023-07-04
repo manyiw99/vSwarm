@@ -3,21 +3,17 @@ services:
   image_classification-python:
     image: image_classification-python:latest
     container_name: image_classification-python
-    working_dir: /root
+    working_dir: /tmp
     entrypoint:
       - python3
       - python/server.py
+      - --count=10
       - --addr=0.0.0.0
       - --port=50051
+    environment:
+      - opts 
     ports:
       - target: 50051
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 2
-              capabilities: [gpu]
       
 
   relay:
