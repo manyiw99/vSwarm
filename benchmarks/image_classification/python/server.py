@@ -21,7 +21,8 @@ import numpy as np
 import dataset
 import imagenet
 
-from proto import image_classification_pb2
+from proto.image_classification import image_classification_pb2
+# import image_classification_pb2
 import image_classification_pb2_grpc
 import grpc
 from concurrent import futures
@@ -67,16 +68,15 @@ last_timeing = []
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
-    parser.add_argument("--dataset-path", default="/tmp/python/data_imagenet", help="path to the dataset")
+    parser.add_argument("--dataset", default="imagenet", choices=SUPPORTED_DATASETS.keys(), help="dataset")
+    parser.add_argument("--dataset-list", help="path to the dataset list")
+    parser.add_argument("--dataset-path", default="/app/data_imagenet", help="path to the dataset")
     parser.add_argument("--profile", default="resnet50-tf", help="standard profiles")
-    parser.add_argument("--scenario", default="SingStream",
+    parser.add_argument("--scenario", default="SingleStream",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
-    parser.add_argument("--model", default="/tmp/python/models", help="model file")
-    parser.add_argument("--output", default="/tmp/output", help="test results")
-    parser.add_argument("--inputs", help="model inputs")
-    parser.add_argument("--outputs", help="model outputs")
+    parser.add_argument("--model", default="/app/models/resnet50_v1.pb", help="model file")
+    parser.add_argument("--output", default="/app/output", help="test results")
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
@@ -85,12 +85,19 @@ def get_args():
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
     parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
+    parser.add_argument("--backend", help="runtime to use")
+    parser.add_argument("--inputs", help="model inputs")
+    parser.add_argument("--outputs", help="model outputs")
+    parser.add_argument("--model-name", help="name of the mlperf model, ie. resnet50")
+    parser.add_argument("--use_preprocessed_dataset", action="store_true", help="use preprocessed dataset instead of the original")
 
     # file to use mlperf rules compliant parameters
     parser.add_argument("--mlperf_conf", default="/tmp/python/configs/user.conf", help="mlperf rules config")
     # file for user LoadGen settings such as target QPS
     parser.add_argument("--user_conf", default="/tmp/python/configs/user.conf", help="user config for user LoadGen settings such as target QPS")
-    
+    # file for LoadGen audit settings
+    parser.add_argument("--audit_conf", default="audit.config", help="config for LoadGen audit settings")
+
     # below will override mlperf rules compliant settings
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
@@ -112,10 +119,6 @@ def get_args():
         kc = k.replace("-", "_")
         if getattr(args, kc) is None:
             setattr(args, kc, v)
-    if args.inputs:
-        args.inputs = args.inputs.split(",")
-    if args.outputs:
-        args.outputs = args.outputs.split(",")
 
     if args.scenario not in SCENARIO_MAP:
         parser.error("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
@@ -240,7 +243,7 @@ class QueueRunner(RunnerBase):
 class Greeter(image_classification_pb2_grpc.GreeterServicer):
     def SayHello(self, request, context):
         token = request.name
-        msg = main()
+        msg = do_image_classification_inference()
         return image_classification_pb2.HelloReply(message=msg)
 
 def serve():
@@ -291,7 +294,7 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
     return result
 
 
-def main():
+def do_image_classification_inference():
     global last_timeing
     args = get_args()
 
@@ -307,7 +310,8 @@ def main():
 
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS["imagenet"]
-
+    if args.use_preprocessed_dataset:
+        pre_proc=None
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
                         name=args.dataset,
@@ -320,7 +324,7 @@ def main():
                         threads=args.threads,
                         **kwargs)
     # load model to backend
-    model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
+    model = backend.load(args.model, inputs=['input_tensor:0'], outputs=['ArgMax:0'])
     final_results = {
         "runtime": model.name(),
         "version": model.version(),
@@ -330,8 +334,8 @@ def main():
     }
 
     mlperf_conf = os.path.abspath(args.mlperf_conf)
-
     user_conf = os.path.abspath(args.user_conf)
+    audit_config = os.path.abspath(args.audit_conf)
 
     if args.output:
         output_dir = os.path.abspath(args.output)
@@ -373,8 +377,8 @@ def main():
     log_settings.log_output = log_output_settings
 
     settings = lg.TestSettings()
-    settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
-    settings.FromConfig(user_conf, args.model_name, args.scenario)
+    settings.FromConfig(mlperf_conf, "resnet50", args.scenario)
+    settings.FromConfig(user_conf, "resnet50", args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly
     if args.accuracy:

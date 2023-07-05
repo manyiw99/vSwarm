@@ -1,17 +1,14 @@
 version: "3.9"
 services:
   image_classification-python:
-    image: image_classification-python:latest
+    image: manyiw99/image_classification-python:latest
     container_name: image_classification-python
-    working_dir: /tmp
+    working_dir: /app
     entrypoint:
       - python3
-      - python/server.py
-      - --count=10
+      - server.py
       - --addr=0.0.0.0
       - --port=50051
-    environment:
-      - opts 
     ports:
       - target: 50051
       

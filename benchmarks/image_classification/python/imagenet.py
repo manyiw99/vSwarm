@@ -4,7 +4,6 @@ implementation of imagenet dataset
 
 # pylint: disable=unused-argument,missing-docstring
 
-import logging
 import os
 import re
 import time
@@ -13,9 +12,6 @@ import cv2
 import numpy as np
 
 import dataset
-
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("imagenet")
 
 
 class Imagenet(dataset.Dataset):
@@ -68,9 +64,9 @@ class Imagenet(dataset.Dataset):
             N = CNT
 
         if not pre_process:
-            log.info("Loading {} preprocessed images using {} threads".format(CNT, N))
+            print("Loading {} preprocessed images using {} threads".format(CNT, N))
         else:
-            log.info("Preprocessing {} images using {} threads".format(CNT, N))
+            print("Preprocessing {} images using {} threads".format(CNT, N))
 
         with open(image_list, 'r') as f:
             lists = []
@@ -93,12 +89,12 @@ class Imagenet(dataset.Dataset):
             self.label_list += label_lists[i]
         time_taken = time.time() - start
         if not self.image_list:
-            log.error("no images in image list found")
+            print("no images in image list found")
             raise ValueError("no images in image list found")
         if self.not_found > 0:
-            log.info("reduced image list, %d images not found", self.not_found)
+            print("reduced image list, %d images not found", self.not_found)
 
-        log.info("loaded {} images, cache={}, already_preprocessed={}, took={:.1f}sec".format(
+        print("loaded {} images, cache={}, already_preprocessed={}, took={:.1f}sec".format(
             len(self.image_list), use_cache, pre_process is None, time_taken))
         self.label_list = np.array(self.label_list)
 

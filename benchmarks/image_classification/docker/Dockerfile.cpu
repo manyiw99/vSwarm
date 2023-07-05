@@ -5,8 +5,8 @@ ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV PATH /opt/anaconda3/bin:$PATH
 
-WORKDIR /root
-ENV HOME /root
+WORKDIR /app
+ENV HOME /app
 
 RUN apt-get update
 
@@ -31,11 +31,12 @@ RUN cd /opt && \
     echo "conda activate base" >> ~/.bashrc && \
     conda config --set always_yes yes --set changeps1 no
 
-RUN conda install pytorch-cpu torchvision-cpu -c pytorch && \
-    pip install --upgrade pip && \
-    pip install cmake && \
-    pip install future pillow onnx opencv-python-headless tensorflow==2.9.1 && \ 
-    pip install Cython && pip install pycocotools && pip3 install protobuf==3.20.*
+RUN conda install pytorch-cpu torchvision-cpu -c pytorch 
+RUN pip install --upgrade pip
+RUN pip install cmake
+RUN pip install future pillow onnx opencv-python-headless tensorflow onnxruntime
+RUN pip install Cython && pip install pycocotools
+RUN pip install protobuf==3.20.*
 
 # loadgen
 RUN cd /tmp && \
@@ -43,21 +44,25 @@ RUN cd /tmp && \
     cd mlperf_inference/loadgen && \
     pip install pybind11 && \
     CFLAGS="-std=c++14" python setup.py install && \
-    rm -rf mlperf
+    rm -rf mlperf 
 
-COPY benchmarks/image_classification/python /tmp/python
+COPY benchmarks/image_classification/python /app
 
 # Prepare dataset and model
-RUN cd /tmp/python/data_imagenet && \
-    wget --quiet https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar && \
-    tar xf ILSVRC2012_img_val.tar && \
-    cd /tmp/python/models && \
-    wget --quiet https://zenodo.org/record/2535873/files/resnet50_v1.pb 
+# RUN cd ./data_imagenet && \
+#     wget --quiet https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar && \
+#     tar xf ILSVRC2012_img_val.tar && \
+#     cd ../models && \
+#     wget --quiet https://zenodo.org/record/2535873/files/resnet50_v1.pb
 
-ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/proto/image_classification/image_classification_pb2_grpc.py /tmp/python
-ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/proto/image_classification/image_classification_pb2.py /tmp/python/proto
+RUN cd ./data_imagenet && \
+    wget --quiet https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/7weeks_old.JPG/800px-7weeks_old.JPG && \
+    echo "800px-7weeks_old.JPG 207" > val_map.txt
 
-# ADD https://raw.githubusercontent.com/manyiw99/vSwarm-proto/main/proto/image_classification/image_classification_pb2_grpc.py /tmp/python
-# ADD https://raw.githubusercontent.com/manyiw99/vSwarm-proto/main/proto/image_classification/image_classification_pb2.py /tmp/python/proto
+ RUN mkdir ./models && cd ./models && \
+    wget --quiet https://zenodo.org/record/2535873/files/resnet50_v1.pb
 
-ENTRYPOINT [ "/bin/bash", "/tmp/python/tools/run_help.sh"]
+ADD https://raw.githubusercontent.com/manyiw99/vSwarm-proto/main/proto/image_classification/image_classification_pb2_grpc.py ./
+ADD https://raw.githubusercontent.com/manyiw99/vSwarm-proto/main/proto/image_classification/image_classification_pb2.py ./proto/image_classification/
+
+ENTRYPOINT ["python3","server.py"]
