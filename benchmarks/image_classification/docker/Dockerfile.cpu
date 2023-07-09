@@ -31,12 +31,12 @@ RUN cd /opt && \
     echo "conda activate base" >> ~/.bashrc && \
     conda config --set always_yes yes --set changeps1 no
 
-RUN conda install pytorch-cpu torchvision-cpu -c pytorch 
-RUN pip install --upgrade pip
-RUN pip install cmake
-RUN pip install future pillow onnx opencv-python-headless tensorflow onnxruntime
-RUN pip install Cython && pip install pycocotools
-RUN pip install protobuf==3.20.*
+RUN conda install pytorch-cpu torchvision-cpu -c pytorch && \
+    pip install --upgrade pip && \
+    pip install cmake && \
+    pip install future pillow onnx opencv-python-headless tensorflow && \
+    pip install Cython && pip install pycocotools && \
+    pip install protobuf==3.20.*
 
 # loadgen
 RUN cd /tmp && \
@@ -49,15 +49,16 @@ RUN cd /tmp && \
 COPY benchmarks/image_classification/python /app
 
 # Prepare dataset and model
-# RUN cd ./data_imagenet && \
-#     wget --quiet https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar && \
-#     tar xf ILSVRC2012_img_val.tar && \
-#     cd ../models && \
-#     wget --quiet https://zenodo.org/record/2535873/files/resnet50_v1.pb
-
+# Here's the full dataset
 RUN cd ./data_imagenet && \
-    wget --quiet https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/7weeks_old.JPG/800px-7weeks_old.JPG && \
-    echo "800px-7weeks_old.JPG 207" > val_map.txt
+    wget --quiet https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar && \
+    tar xf ILSVRC2012_img_val.tar && \
+    rm -f ILSVRC2012_img_val.tar
+
+# Here's one image sample used to test Dockerfile
+# RUN cd ./data_imagenet && \
+#     wget --quiet https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/7weeks_old.JPG/800px-7weeks_old.JPG && \
+#     echo "800px-7weeks_old.JPG 207" > val_map.txt
 
  RUN mkdir ./models && cd ./models && \
     wget --quiet https://zenodo.org/record/2535873/files/resnet50_v1.pb

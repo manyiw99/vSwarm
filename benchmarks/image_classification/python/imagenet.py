@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 
 import dataset
+import logging
 
 
 class Imagenet(dataset.Dataset):
@@ -63,10 +64,11 @@ class Imagenet(dataset.Dataset):
         if N > CNT:
             N = CNT
 
+        logging.info("Start preprocessing data...")
         if not pre_process:
-            print("Loading {} preprocessed images using {} threads".format(CNT, N))
+            logging.info("Loading {} preprocessed images using {} threads".format(CNT, N))
         else:
-            print("Preprocessing {} images using {} threads".format(CNT, N))
+            logging.info("Preprocessing {} images using {} threads".format(CNT, N))
 
         with open(image_list, 'r') as f:
             lists = []
@@ -89,12 +91,12 @@ class Imagenet(dataset.Dataset):
             self.label_list += label_lists[i]
         time_taken = time.time() - start
         if not self.image_list:
-            print("no images in image list found")
+            logging.info("no images in image list found")
             raise ValueError("no images in image list found")
         if self.not_found > 0:
-            print("reduced image list, %d images not found", self.not_found)
+            logging.info("reduced image list, %d images not found", self.not_found)
 
-        print("loaded {} images, cache={}, already_preprocessed={}, took={:.1f}sec".format(
+        logging.info("loaded {} images, cache={}, already_preprocessed={}, took={:.1f}sec".format(
             len(self.image_list), use_cache, pre_process is None, time_taken))
         self.label_list = np.array(self.label_list)
 

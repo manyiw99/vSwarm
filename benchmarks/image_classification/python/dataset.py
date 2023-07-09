@@ -184,40 +184,6 @@ def pre_process_vgg(img, dims=None, need_transpose=False):
     return img
 
 
-def pre_process_mobilenet(img, dims=None, need_transpose=False):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    output_height, output_width, _ = dims
-    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
-    img = center_crop(img, output_height, output_width)
-    img = np.asarray(img, dtype='float32')
-
-    img /= 255.0
-    img -= 0.5
-    img *= 2
-
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-    return img
-
-
-def pre_process_imagenet_pytorch(img, dims=None, need_transpose=False):
-    from PIL import Image
-    import torchvision.transforms.functional as F
-
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = Image.fromarray(img)
-    img = F.resize(img, 256, Image.BILINEAR)
-    img = F.center_crop(img, 224)
-    img = F.to_tensor(img)
-    img = F.normalize(img, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], inplace=False)
-    if not need_transpose:
-        img = img.permute(1, 2, 0) # NHWC
-    img = np.asarray(img, dtype='float32')
-    return img
-
-
 def maybe_resize(img, dims):
     img = np.array(img, dtype=np.float32)
     if len(img.shape) < 3 or img.shape[2] != 3:
@@ -227,56 +193,4 @@ def maybe_resize(img, dims):
     if dims != None:
         im_height, im_width, _ = dims
         img = cv2.resize(img, (im_width, im_height), interpolation=cv2.INTER_LINEAR)
-    return img
-
-
-def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    img = np.asarray(img, dtype=np.uint8)
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-    return img
-
-
-def pre_process_coco_pt_mobilenet(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    img -= 127.5
-    img /= 127.5
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-    return img
-
-
-def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-    std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-
-    img = img / 255. - mean
-    img = img / std
-
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-
-    return img
-
-
-def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    mean = np.array([123.68, 116.78, 103.94], dtype=np.float32)
-    img = img - mean
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-
-    return img
-
-
-def pre_process_openimages_retinanet(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    img /= 255.
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
     return img

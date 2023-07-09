@@ -26,6 +26,7 @@ from proto.image_classification import image_classification_pb2
 import image_classification_pb2_grpc
 import grpc
 from concurrent import futures
+import logging
 
 NANO_SEC = 1e9
 MILLI_SEC = 1000
@@ -72,7 +73,7 @@ def get_args():
     parser.add_argument("--dataset-list", help="path to the dataset list")
     parser.add_argument("--dataset-path", default="/app/data_imagenet", help="path to the dataset")
     parser.add_argument("--profile", default="resnet50-tf", help="standard profiles")
-    parser.add_argument("--scenario", default="SingleStream",
+    parser.add_argument("--scenario", default="Offline",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--model", default="/app/models/resnet50_v1.pb", help="model file")
@@ -244,16 +245,16 @@ class Greeter(image_classification_pb2_grpc.GreeterServicer):
     def SayHello(self, request, context):
         token = request.name
         msg = do_image_classification_inference()
+        logging.info("Reply message: ", msg)
         return image_classification_pb2.HelloReply(message=msg)
 
 def serve():
     args = get_args()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
-
     image_classification_pb2_grpc.add_GreeterServicer_to_server(Greeter(), server)
     address = (args.addr + ":" + args.port)
     server.add_insecure_port(address)
-    print("Start image_classification-python server. Addr: " + address)
+    logging.info("Start image_classification-python server. Addr: " + address)
     server.start()
     server.wait_for_termination()
 
@@ -290,7 +291,7 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
     result = "{} qps={:.2f}, mean={:.4f}, time={:.3f}{}, queries={}, tiles={}".format(
         name, result["qps"], result["mean"], took, acc_str,
         len(result_list), buckets_str)
-    print(result)
+    logging.info(result)
     return result
 
 
@@ -420,7 +421,7 @@ def do_image_classification_inference():
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
 
-    add_results(final_results, "{}".format(scenario),
+    msg = add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
 
     runner.finish()
@@ -434,6 +435,10 @@ def do_image_classification_inference():
         with open("results.json", "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
 
+    logging.info(str(final_results))
+    return msg
+
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     serve()
