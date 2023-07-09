@@ -1,4 +1,3 @@
-
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -428,9 +427,7 @@ def do_image_classification_inference():
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
 
-    #
     # write final results
-    #
     if args.output:
         with open("results.json", "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)

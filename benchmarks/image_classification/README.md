@@ -24,7 +24,6 @@ TestScenario.SingleStream qps=37.27, mean=0.0263, time=2.683, queries=100, tiles
 Here are some parameters can be modified in `yamls/docker-compose/dc-classification.yaml` file:
 - `--count`: limits the number of items in the dataset used for accuracy pass
 - `--time`: limits the time the benchmark runs
-- `--accuracy`: enables accuracy pass
 - `--scenario`: {'SingStream','Offline'}. Offline means send all queries at one time, SingleStream means send the next query as soon as previous one is completed
 - `--threads`: number of worker threads to use (default: the number of processors in the system)
 - `--qps`: expected QPS

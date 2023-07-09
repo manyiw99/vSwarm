@@ -23,7 +23,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: image_classification-python
+  name: image-classification-python
   namespace: default
 spec:
   template:
@@ -38,11 +38,9 @@ spec:
             - --function-endpoint-url=0.0.0.0
             - --function-endpoint-port=50051
             - --function-name=image_classification-python
-            - --value=10
-            - --generator=linear
-            - --lowerBound=1
-            - --upperBound=10
         - image: docker.io/manyiw99/image_classification-python:latest
           args:
+            - --count=100
+            - --scenario=SingleStream
             - --addr=0.0.0.0
             - --port=50051
