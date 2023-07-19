@@ -1,14 +1,14 @@
 # Image Classification
 
-The benchmark implements `Resnet50 model inference` on `Imagenet2012 val` dataset to do image classification. The implementation references [MLPerf Edge Inference Suite](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection).
-
-The benchmark is implementated in Python.
+The benchmark implements `Resnet50 model inference` to do image classification.
 
 ## Running the benchmark locally(using docker)
 1. Start function using docker compose
 ```bash
 docker-compose -f ./yamls/docker-compose/dc-classification.yaml up
 ```
+
+### Invoke once
 2. In a new terminal, invoke the interface function with grpcurl
 ```bash
 ./tools/bin/grpcurl -plaintext localhost:50000 helloworld.Greeter.SayHello
@@ -19,6 +19,20 @@ Hers's an example of benchmark output:
 ```
 TestScenario.SingleStream qps=37.27, mean=0.0263, time=2.683, queries=100, tiles=50.0:0.0263,80.0:0.0264,90.0:0.0265,95.0:0.0268,99.0:0.0271,99.9:0.0290
 ```
+
+### Invoke multiple times
+3. Run the invoker
+   ```bash
+   # build the invoker binary
+   cd ../../tools/invoker
+   make invoker
+
+   # Specify the hostname through "endpoints.json"
+   echo '[ { "hostname": "localhost" } ]' > endpoints.json
+
+   # Start the invoker with a chosen RPS rate and time
+   ./invoker -port 50000 -dbg -time 10 -rps 1
+   ```
 
 ### Parameters
 Here are some parameters can be modified in `yamls/docker-compose/dc-classification.yaml` file:
