@@ -26,6 +26,7 @@ ENV PYTHON_VERSION=3.7
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV PATH /opt/anaconda3/bin:$PATH
+ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 ENV HOME /app
@@ -73,8 +74,8 @@ COPY benchmarks/image_classification/python /app
 # Prepare dataset and model
 # Here's the dataset with 500 images
 RUN cd ./data_imagenet && \
-    unzip ILSVRC2012_img_val.tar && \
-    rm -f ILSVRC2012_img_val.tar && \
+    unzip ILSVRC2012_img_val.zip && \
+    rm -f ILSVRC2012_img_val.zip && \
     cd ../models && \
     unzip resnet50_v1.pb.zip && \
     rm -rf resnet50_v1.pb.zip
